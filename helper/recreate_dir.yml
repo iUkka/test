@@ -1,0 +1,21 @@
+- block:
+  - name: Check path {{ dir }}
+    stat:
+      path: "{{ dir }}"
+    register: path
+  - name: Create path {{ dir }}
+    file:
+      path: "{{ dir }}"
+      state: directory
+    when: not path.stat.exists
+  - block:
+    - block:
+      - name: Remove path {{ dir }}
+        shell: rm -rf {{ dir }}
+      - name: Create path {{ dir }}
+        file:
+          path: "{{ dir }}"
+          state: directory
+      when: not path.stat.isdir and not path.stat.islnk
+    when: path.stat.exists
+  tags: always

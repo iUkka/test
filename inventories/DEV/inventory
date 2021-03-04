@@ -1,0 +1,18 @@
+localhost ansible_connection=local
+
+[builder]
+localhost
+
+[sample_1]
+localhost
+
+[sample_2]
+localhost
+
+[sample_3]
+localhost
+
+[runner:children]
+sample_1
+sample_2
+sample_3

@@ -1,0 +1,4 @@
+- hosts: runner
+  gather_facts: no
+  roles:
+    - runner

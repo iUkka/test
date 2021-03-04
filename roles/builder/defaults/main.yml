@@ -1,0 +1,16 @@
+builder:
+  installdir: /tmp/test # директория для создания venv
+  pip_install: # пакеты для установки в окружение
+    - flask
+  app_list: # Список создаваемых образов.
+    sample_1:
+      app_template: app.py  # указатель на темплейт для создания приложения -> roles/builder/template/app.py.j2
+                            # темплейт должен иметь дополнительное разрешение .j2
+      dockerfile_template: sample_dockerfile  # указатель на темплейт для докерфайла -> roles/builder/template/sample_dockerfile.j2
+                                              # темплейт должен иметь дополнительное разрешение .j2
+      version: latest # необязательное, под какой версией создавать образ, по умолчанию latest
+    sample_2:
+      app_template: app.py
+      dockerfile_template: sample_dockerfile
+#      version: latest
+

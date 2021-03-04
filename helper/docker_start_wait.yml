@@ -1,0 +1,10 @@
+- block:
+  - name: Get logs from docker
+    command: "{{ docker_cmd | default('docker') }} logs {{ current_container_id | default('') }}"
+  - name: "Wait for correct stop {{ current_container_id|default('') }}"
+    command: "{{ docker_cmd | default('docker') }} logs --since 10s {{ current_container_id }}"
+    register: correct_start
+    until: current_adapter_start_line in correct_start.stdout
+    retries: "{{ wait_for_start | default(5) }}"
+    delay: 1
+  tags: always

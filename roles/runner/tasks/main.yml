@@ -1,0 +1,36 @@
+### INIT SECTION ###
+- name: Generate containers for run
+  set_fact:
+    runner_containers: "{{ (runner_containers | default([])) + [item] }}"
+  when: ('run_only' in ansible_run_tags and item in ansible_run_tags) or ('run_only' not in ansible_run_tags)
+  with_items: "{{ runner.app_list.keys() | list }}"
+  run_once: true
+  tags: always
+
+- name: Create networks
+  block:
+  - name: Generate networks list
+    set_fact:
+      current_networks: "{{ (current_networks | default([]) + runner.app_list[item].network | default([])) | unique }}"
+    with_items: "{{ runner_containers }}"
+  - name: Create networks for containers
+    command: "{{ docker_cmd | default('docker') }} network create {{ item }} --attachable"
+    with_items: "{{ current_networks }}"
+    register: network_result
+    vars:
+      search_string: "Error response from daemon: network with name {{ item }} already exists"
+    failed_when: search_string not in network_result.stderr|default('') and network_result.rc != 0
+  tags: network
+
+- name: Run containers
+  include_tasks: container_runner.yml
+  loop: "{{ runner_containers }}"
+  loop_control:
+    loop_var: app_name
+  when:
+    - inventory_hostname in groups[app_name] | default([])
+    - runner.app_list[app_name] | default(false)
+  tags:
+    - stop
+    - start
+    - restart

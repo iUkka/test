@@ -1,0 +1,34 @@
+- set_fact:
+    current_adapter: "{{ runner.app_list[app_name] }}"
+  tags: always
+
+# STOP SECTION
+- name: Stop all containers with name {{ app_name }}
+  shell: "{{ docker_cmd | default('docker') }} rm $(docker stop $(docker ps -a -q --filter name={{ '^' + app_name + '$' }} --format='{{ '{{.ID}}' }}'))"
+  register: docker_stop
+  failed_when: "'requires at least 1 argument' not in docker_stop.stderr|default('') and docker_stop.rc != 0"
+  tags:
+    - stop
+    - restart
+
+# START SECTION
+- block:
+    - name: Create container {{ current_adapter.image | default(app_name) }} from image {{ app_name }}:{{ current_adapter.version | default('latest') }}
+      command: "{{ docker_cmd | default('docker') }} create --publish {{ current_adapter.port }} --name {{ app_name }} {{ current_adapter.image | default(app_name) }}:{{ current_adapter.version | default('latest') }}"
+
+    - name: Add networks to container {{ app_name }}
+      command: "{{ docker_cmd | default('docker') }} network connect {{ item }} {{ app_name }} --alias={{ app_name }}.{{ item }}"
+      with_items: "{{ current_adapter.network | default([]) }}"
+
+    - name: Run docker container {{ app_name }}
+      command: "{{ docker_cmd | default('docker') }} start {{ app_name }}"
+      register: run_container_result
+
+    - name: Check container {{ app_name }} correct start
+      include_tasks: helper/docker_start_wait.yml
+      vars:
+        current_container_id: "{{ run_container_result.stdout_lines | last | trim }}"
+        current_adapter_start_line: "{{ current_adapter.correct_start_line }}"
+  tags:
+    - start
+    - restart

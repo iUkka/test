@@ -1,0 +1,13 @@
+- hosts: builder
+  gather_facts: no
+  pre_tasks:
+    - include_tasks: helper/recreate_dir.yml
+      vars:
+        dir: "{{ builder.installdir }}"
+  roles:
+    - builder
+
+- hosts: runner
+  gather_facts: no
+  roles:
+    - runner

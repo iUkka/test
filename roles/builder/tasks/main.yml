@@ -1,0 +1,53 @@
+### INIT SECTION ###
+- block:
+    - name: Create Python virtual env and install packages inside the virtual env
+      pip:
+        name: "{{ builder.pip_install }}"
+        virtualenv: "{{ builder.installdir }}/venv"
+        state: present
+    # Не смог по быстрому найти решение сгенерить этот файл по другому
+    - name: Get requiremens.txt from virtualenv
+      shell: >
+        source venv/bin/activate
+        &&
+        pip freeze > requirements.txt
+        &&
+        deactivate
+      args:
+        chdir: "{{ builder.installdir }}"
+    - name: Generate containers name for generation
+      set_fact:
+        containers: "{{ (containers|default([])) + [item] }}"
+      when: ('run_only' in ansible_run_tags and item in ansible_run_tags) or ('run_only' not in ansible_run_tags)
+      with_items: "{{ builder.app_list.keys() | list }}"
+    - name: Prepare source directories for containers
+      block:
+        - name: Clean old containers directories
+          file:
+            path: "{{ builder.installdir }}/{{ item }}"
+            state: absent
+          with_items: "{{ containers | default([]) }}"
+        - name: Create containers directories
+          file:
+            path: "{{ builder.installdir }}/{{ item }}"
+            state: directory
+          with_items: "{{ containers | default([])}}"
+        - name: Copy requirements
+          copy:
+            src: "{{ builder.installdir }}/requirements.txt"
+            dest: "{{ builder.installdir }}/{{ item }}/requirements.txt"
+          with_items: "{{ containers | default([])}}"
+        - name: Delete unused files
+          file:
+            path: "{{ builder.installdir }}//requirements.txt"
+            state: absent
+  tags: always
+
+- name: Generate containers
+  include_tasks: container_generator.yml
+  loop: "{{ containers | default([]) }}"
+  loop_control:
+    loop_var: app_name
+  tags: build
+
+

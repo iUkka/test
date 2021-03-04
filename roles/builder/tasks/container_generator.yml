@@ -1,0 +1,23 @@
+- block:
+    - set_fact:
+        current_adapter: "{{ builder.app_list[app_name] }}"
+    - name: Copy files from template
+      template:
+        src: "{{ item.key }}.j2"
+        dest: "{{ builder.installdir }}/{{ app_name }}/{{ item.value }}"
+      vars:
+        current_files:
+      with_dict:
+        - "{{ current_adapter.app_template }}": "{{ current_adapter.app_template }}"
+        - "{{ current_adapter.dockerfile_template }}": Dockerfile
+# Так как у меня нет возможности ставить пакеты из интернета (в том числе устанавливать пакеты с помощью pip (pip install docker-py), либо тащить модули из галакси ),
+# то будем делать старым дедовским методом - все руками.
+    - name: Build image {{ app_name }}:{{ current_adapter.version | default('latest') }}
+      command: "{{ docker_cmd | default('docker') }} build -t {{ app_name }}:{{ current_adapter.version | default('latest') }} ./"
+      args:
+        chdir: "{{ builder.installdir }}/{{ app_name }}"
+
+# Тут должен быть docker push, но в задаче это не обговаривалось
+# Так как работ с регистри нет, поэтому работаем с localhost.
+# Данный плейбук можно адаптировать для работы с несколькими хостами
+  tags: build
